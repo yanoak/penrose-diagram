@@ -323,22 +323,44 @@ export function generateRValues(count: number): { r: number; regions: Region[] }
 /**
  * Generate constant-t values to display.
  */
+/**
+ * Penrose R_P of a constant-t curve at the singularity (r=0).
+ * R_P = π/4 − atan(e^(−t/2))
+ * Ranges from 0 (t=0) to π/4 (t→∞).
+ */
+function singularityRPForT(t: number): number {
+	return Math.PI / 4 - Math.atan(Math.exp(-t / 2));
+}
+
+/**
+ * Invert: find t that places the singularity intersection at a target R_P.
+ * t = −2·ln(tan(π/4 − R_P))
+ */
+function tForSingularityRP(targetRP: number): number {
+	return -2 * Math.log(Math.tan(Math.PI / 4 - targetRP));
+}
+
 export function generateTValues(count: number): { t: number; regions: Region[] }[] {
 	if (count === 0) return [];
 	const result: { t: number; regions: Region[] }[] = [];
 
-	// Generate symmetric t values
-	const tValues: number[] = [0];
-	const steps = [0.5, 1, 1.5, 2, 3, 4, 6];
-	for (let i = 0; i < steps.length && tValues.length < count; i++) {
-		tValues.push(steps[i]);
-		if (tValues.length < count) {
-			tValues.push(-steps[i]);
-		}
+	// Uniformly space t values by their R_P position at the singularity.
+	// This makes the curves equally spaced where they cross the top/bottom edges.
+	const maxRP = Math.PI / 4 * 0.95;
+	const tValues: number[] = [];
+	const numPairs = Math.floor(count / 2);
+
+	if (count % 2 === 1) {
+		tValues.push(0);
+	}
+	for (let i = 0; i < numPairs; i++) {
+		const frac = (i + 1) / (numPairs + (count % 2 === 1 ? 1 : 0));
+		const t = tForSingularityRP(maxRP * frac);
+		tValues.push(t, -t);
 	}
 
-	for (let i = 0; i < count && i < tValues.length; i++) {
-		result.push({ t: tValues[i], regions: ['I', 'II', 'III', 'IV'] });
+	for (const t of tValues) {
+		result.push({ t, regions: ['I', 'II', 'III', 'IV'] });
 	}
 
 	return result;
