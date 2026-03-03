@@ -1,5 +1,51 @@
 <script lang="ts">
 	import { config } from '$lib/stores/config.svelte';
+
+	function getSvgElement(): SVGSVGElement | null {
+		return document.querySelector('.diagram-area svg');
+	}
+
+	function downloadSVG() {
+		const svg = getSvgElement();
+		if (!svg) return;
+		const serializer = new XMLSerializer();
+		const source = serializer.serializeToString(svg);
+		const blob = new Blob([source], { type: 'image/svg+xml;charset=utf-8' });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = 'penrose-diagram.svg';
+		a.click();
+		URL.revokeObjectURL(url);
+	}
+
+	function downloadPNG() {
+		const svg = getSvgElement();
+		if (!svg) return;
+		const scale = 2;
+		const w = svg.viewBox.baseVal.width || svg.clientWidth;
+		const h = svg.viewBox.baseVal.height || svg.clientHeight;
+		const canvas = document.createElement('canvas');
+		canvas.width = w * scale;
+		canvas.height = h * scale;
+		const ctx = canvas.getContext('2d')!;
+		ctx.scale(scale, scale);
+
+		const serializer = new XMLSerializer();
+		const source = serializer.serializeToString(svg);
+		const blob = new Blob([source], { type: 'image/svg+xml;charset=utf-8' });
+		const url = URL.createObjectURL(blob);
+		const img = new Image();
+		img.onload = () => {
+			ctx.drawImage(img, 0, 0, w, h);
+			URL.revokeObjectURL(url);
+			const a = document.createElement('a');
+			a.href = canvas.toDataURL('image/png');
+			a.download = 'penrose-diagram.png';
+			a.click();
+		};
+		img.src = url;
+	}
 </script>
 
 <div class="control-panel">
@@ -104,6 +150,14 @@
 			<input type="range" min="400" max="800" step="10" bind:value={config.diagramSize} />
 		</label>
 	</section>
+
+	<section>
+		<h3>Export</h3>
+		<div class="export-buttons">
+			<button onclick={downloadSVG}>Download SVG</button>
+			<button onclick={downloadPNG}>Download PNG</button>
+		</div>
+	</section>
 </div>
 
 <style>
@@ -187,5 +241,25 @@
 		border-radius: 4px;
 		cursor: pointer;
 		padding: 1px;
+	}
+
+	.export-buttons {
+		display: flex;
+		gap: 0.5rem;
+	}
+
+	.export-buttons button {
+		flex: 1;
+		padding: 0.5rem;
+		border: 1px solid #ccc;
+		border-radius: 4px;
+		background: #fff;
+		cursor: pointer;
+		font-size: 0.85rem;
+		color: #333;
+	}
+
+	.export-buttons button:hover {
+		background: #eee;
 	}
 </style>

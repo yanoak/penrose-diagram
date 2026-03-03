@@ -105,6 +105,37 @@ export function zigzagify(points: Point[], amplitude: number = 6, numTeeth: numb
 	return result;
 }
 
+/**
+ * Convert an array of points into a smooth SVG path string using
+ * Catmull-Rom → cubic Bézier conversion.
+ */
+export function pointsToSmoothPath(points: Point[], tension: number = 0.5): string {
+	if (points.length < 2) return '';
+	if (points.length === 2) {
+		return `M${points[0].x},${points[0].y}L${points[1].x},${points[1].y}`;
+	}
+
+	const alpha = tension;
+	let d = `M${points[0].x},${points[0].y}`;
+
+	for (let i = 0; i < points.length - 1; i++) {
+		const p0 = points[Math.max(0, i - 1)];
+		const p1 = points[i];
+		const p2 = points[i + 1];
+		const p3 = points[Math.min(points.length - 1, i + 2)];
+
+		// Catmull-Rom to cubic Bézier control points
+		const cp1x = p1.x + (p2.x - p0.x) * alpha / 3;
+		const cp1y = p1.y + (p2.y - p0.y) * alpha / 3;
+		const cp2x = p2.x - (p3.x - p1.x) * alpha / 3;
+		const cp2y = p2.y - (p3.y - p1.y) * alpha / 3;
+
+		d += `C${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
+	}
+
+	return d;
+}
+
 function pathLength(points: Point[]): number {
 	let len = 0;
 	for (let i = 1; i < points.length; i++) {
@@ -220,6 +251,48 @@ export function constantTCurve(
  * Generate constant-r curve values to display.
  * Returns nicely distributed r values in exterior and interior.
  */
+/**
+ * Compute the Penrose R_P coordinate at t=0 for a given r in the exterior (r > 1).
+ * R_P = atan(√(r-1)·e^(r/2))
+ */
+function exteriorRToPenroseR(r: number): number {
+	return Math.atan(Math.sqrt(r - 1) * Math.exp(r / 2));
+}
+
+/**
+ * Compute the Penrose T_P coordinate at t=0 for a given r in the interior (r < 1).
+ * At t=0: X_K=0, T_K=√(1-r)·e^(r/2), so T_P = atan(T_K)
+ */
+function interiorRToPenroseT(r: number): number {
+	return Math.atan(Math.sqrt(1 - r) * Math.exp(r / 2));
+}
+
+/**
+ * Find exterior r that maps to a target Penrose R_P value, using bisection.
+ */
+function penroseRToExteriorR(targetRP: number): number {
+	let lo = 1 + 1e-8, hi = 100;
+	for (let i = 0; i < 60; i++) {
+		const mid = (lo + hi) / 2;
+		if (exteriorRToPenroseR(mid) < targetRP) lo = mid;
+		else hi = mid;
+	}
+	return (lo + hi) / 2;
+}
+
+/**
+ * Find interior r that maps to a target Penrose T_P value, using bisection.
+ */
+function penroseTToInteriorR(targetTP: number): number {
+	let lo = 1e-6, hi = 1 - 1e-8;
+	for (let i = 0; i < 60; i++) {
+		const mid = (lo + hi) / 2;
+		if (interiorRToPenroseT(mid) < targetTP) hi = mid;
+		else lo = mid;
+	}
+	return (lo + hi) / 2;
+}
+
 export function generateRValues(count: number): { r: number; regions: Region[] }[] {
 	if (count === 0) return [];
 	const result: { r: number; regions: Region[] }[] = [];
@@ -228,16 +301,20 @@ export function generateRValues(count: number): { r: number; regions: Region[] }
 	const exteriorCount = Math.ceil(count / 2);
 	const interiorCount = count - exteriorCount;
 
-	// Exterior r values (r > 1): start very close to horizon, spread outward
-	const exteriorRs = [1.01, 1.03, 1.07, 1.15, 1.3, 1.5, 2, 2.5, 3, 4, 5, 8, 20];
-	for (let i = 0; i < exteriorCount && i < exteriorRs.length; i++) {
-		result.push({ r: exteriorRs[i], regions: ['I', 'III'] });
+	// Exterior r values: uniformly spaced in Penrose R_P from near 0 to near π/2
+	const maxRP = Math.PI / 2 * 0.98;
+	for (let i = 0; i < exteriorCount; i++) {
+		const targetRP = maxRP * (i + 1) / (exteriorCount + 1);
+		const r = penroseRToExteriorR(targetRP);
+		result.push({ r, regions: ['I', 'III'] });
 	}
 
-	// Interior r values (0 < r < 1): start close to horizon, spread toward singularity
-	const interiorRs = [0.95, 0.9, 0.8, 0.65, 0.5, 0.35, 0.2, 0.1];
-	for (let i = 0; i < interiorCount && i < interiorRs.length; i++) {
-		result.push({ r: interiorRs[i], regions: ['II', 'IV'] });
+	// Interior r values: uniformly spaced in Penrose T_P from near 0 to near π/4
+	const maxTP = Math.PI / 4 * 0.98;
+	for (let i = 0; i < interiorCount; i++) {
+		const targetTP = maxTP * (i + 1) / (interiorCount + 1);
+		const r = penroseTToInteriorR(targetTP);
+		result.push({ r, regions: ['II', 'IV'] });
 	}
 
 	return result;

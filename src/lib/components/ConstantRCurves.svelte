@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Point, Region } from '$lib/math/types';
+	import { pointsToSmoothPath } from '$lib/math/curves';
 
 	interface CurveData {
 		r: number;
@@ -15,10 +16,6 @@
 	}
 
 	let { curves, color, strokeWidth, clipId }: Props = $props();
-
-	function toPolyline(pts: Point[]): string {
-		return pts.map(p => `${p.x},${p.y}`).join(' ');
-	}
 </script>
 
 <g clip-path="url(#{clipId})">
@@ -26,8 +23,8 @@
 		{#each curve.regions as region}
 			{@const pts = curve.curves.get(region)}
 			{#if pts && pts.length > 1}
-				<polyline
-					points={toPolyline(pts)}
+				<path
+					d={pointsToSmoothPath(pts)}
 					fill="none"
 					stroke={color}
 					stroke-width={strokeWidth}

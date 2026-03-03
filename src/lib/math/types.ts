@@ -53,10 +53,10 @@ export const defaultConfig: DiagramConfig = {
 	horizonColor: '#000088',
 	constantRColor: '#9b4d6e',
 	constantTColor: '#5566bb',
-	zigzagAmplitude: 5,
-	zigzagTeeth: 18,
-	futureZigzagOffset: 0,
-	pastZigzagOffset: 0,
+	zigzagAmplitude: 3.5,
+	zigzagTeeth: 22,
+	futureZigzagOffset: -2,
+	pastZigzagOffset: -2,
 	lineThickness: 1.5,
 	diagramSize: 600
 };
