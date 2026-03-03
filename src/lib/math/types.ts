@@ -30,6 +30,10 @@ export interface DiagramConfig {
 	horizonColor: string;
 	constantRColor: string;
 	constantTColor: string;
+	zigzagAmplitude: number;
+	zigzagTeeth: number;
+	futureZigzagOffset: number;
+	pastZigzagOffset: number;
 	lineThickness: number;
 	diagramSize: number;
 }
@@ -49,6 +53,10 @@ export const defaultConfig: DiagramConfig = {
 	horizonColor: '#000088',
 	constantRColor: '#9b4d6e',
 	constantTColor: '#5566bb',
+	zigzagAmplitude: 5,
+	zigzagTeeth: 18,
+	futureZigzagOffset: 0,
+	pastZigzagOffset: 0,
 	lineThickness: 1.5,
 	diagramSize: 600
 };

@@ -34,22 +34,36 @@
 	let vertices = $derived(diamondVertices(cx, cy, scale));
 
 	// Singularity curves — smooth base curves + zigzag versions for rendering
-	let futureSingBase = $derived(singularityCurve(true, cx, cy, scale));
-	let pastSingBase = $derived(singularityCurve(false, cx, cy, scale));
-	let futureSingularity = $derived(zigzagify(futureSingBase, 5, 18));
-	let pastSingularity = $derived(zigzagify(pastSingBase, 5, 18));
+	// The exact asymptotic endpoints are the edge midpoints of the diamond
+	let edgeMidLeft = $derived({ x: (vertices[3].x + vertices[0].x) / 2, y: (vertices[3].y + vertices[0].y) / 2 });
+	let edgeMidRight = $derived({ x: (vertices[0].x + vertices[1].x) / 2, y: (vertices[0].y + vertices[1].y) / 2 });
+	let edgeMidLeftBot = $derived({ x: (vertices[3].x + vertices[2].x) / 2, y: (vertices[3].y + vertices[2].y) / 2 });
+	let edgeMidRightBot = $derived({ x: (vertices[2].x + vertices[1].x) / 2, y: (vertices[2].y + vertices[1].y) / 2 });
+	let futureSingBase = $derived([edgeMidLeft, ...singularityCurve(true, cx, cy, scale), edgeMidRight]);
+	let pastSingBase = $derived([edgeMidLeftBot, ...singularityCurve(false, cx, cy, scale), edgeMidRightBot]);
+	let futureSingularity = $derived(
+		zigzagify(futureSingBase, config.zigzagAmplitude, config.zigzagTeeth)
+			.map(p => ({ x: p.x, y: p.y + config.futureZigzagOffset }))
+	);
+	let pastSingularity = $derived(
+		zigzagify(pastSingBase, config.zigzagAmplitude, config.zigzagTeeth)
+			.map(p => ({ x: p.x, y: p.y + config.pastZigzagOffset }))
+	);
 
-	// Clip polygon: diamond shape but with top/bottom replaced by singularity curves.
-	// Path: left vertex (i⁰) → future singularity (left→right) → right vertex (i⁰)
-	//        → past singularity (right→left) → back to left vertex
+	// Clip polygon: diamond with top/bottom replaced by zigzag singularity curves.
+	// Uses exact edge midpoints as anchors so the sides follow the diamond edges.
 	let singularityClipPoints = $derived.by(() => {
-		const left = vertices[3];  // i⁰ left
-		const right = vertices[1]; // i⁰ right
+		const left = vertices[3];   // i⁰ left
+		const right = vertices[1];  // i⁰ right
 		const pts: Point[] = [
 			left,
-			...futureSingularity,      // top edge follows future zigzag
+			edgeMidLeft,
+			...futureSingularity.slice(1, -1),
+			edgeMidRight,
 			right,
-			...[...pastSingularity].reverse()  // bottom edge follows past zigzag
+			edgeMidRightBot,
+			...[...pastSingularity].reverse().slice(1, -1),
+			edgeMidLeftBot,
 		];
 		return pts.map(p => `${p.x},${p.y}`).join(' ');
 	});

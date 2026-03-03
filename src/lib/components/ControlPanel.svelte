@@ -74,6 +74,26 @@
 	</section>
 
 	<section>
+		<h3>Singularity Zigzag</h3>
+		<label>
+			<span>Teeth count: {config.zigzagTeeth}</span>
+			<input type="range" min="4" max="40" bind:value={config.zigzagTeeth} />
+		</label>
+		<label>
+			<span>Amplitude: {config.zigzagAmplitude.toFixed(1)}</span>
+			<input type="range" min="1" max="20" step="0.5" bind:value={config.zigzagAmplitude} />
+		</label>
+		<label>
+			<span>Future vertical offset: {config.futureZigzagOffset}px</span>
+			<input type="range" min="-50" max="50" bind:value={config.futureZigzagOffset} />
+		</label>
+		<label>
+			<span>Past vertical offset: {config.pastZigzagOffset}px</span>
+			<input type="range" min="-50" max="50" bind:value={config.pastZigzagOffset} />
+		</label>
+	</section>
+
+	<section>
 		<h3>Appearance</h3>
 		<label>
 			<span>Line thickness: {config.lineThickness.toFixed(1)}</span>
